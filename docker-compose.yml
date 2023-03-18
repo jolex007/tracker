@@ -1,0 +1,49 @@
+services:
+  database:
+    image: postgres:10.5
+    environment:
+      - POSTGRES_DB=production
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - ./database/create-tables.sql:/docker-entrypoint-initdb.d/create-tables.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d production -U user"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  idm:
+    build: 
+      context: ./
+      dockerfile: ./idm/Dockerfile
+    depends_on:
+      database:
+        condition: service_healthy
+    links:
+      - database
+    networks:
+      - backend
+    ports:
+      - "8000:8000"
+
+  tracker:
+    build: 
+      context: ./
+      dockerfile: ./tracker/Dockerfile
+    depends_on:
+      database:
+        condition: service_healthy
+    links:
+      - database
+    networks:
+      - backend
+    ports:
+      - "8001:8001"
+
+networks:
+  backend:
+    driver: bridge
